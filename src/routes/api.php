@@ -2,18 +2,30 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Models\Message;
 
-/*
-|--------------------------------------------------------------------------
-| API Routes
-|--------------------------------------------------------------------------
-|
-| Here is where you can register API routes for your application. These
-| routes are loaded by the RouteServiceProvider within a group which
-| is assigned the "api" middleware group. Enjoy building your API!
-|
-*/
+// 一覧取得
+Route::get('/messages', function () {
+    return Message::orderBy('id')->get();
+});
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
+Route::post('/messages', function (Request $request) {
+    $request->validate([
+        'text' => ['required', 'string'],
+        'is_me' => ['required', 'boolean'],
+    ]);
+
+    $isMe = filter_var($request->is_me, FILTER_VALIDATE_BOOLEAN);
+
+    $message = Message::create([
+        'text' => $request->text,
+        'is_me' => $isMe,
+        'is_read' => false,
+    ]);
+
+    Message::where('is_me', !$isMe)
+        ->where('is_read', false)
+        ->update(['is_read' => true]);
+
+    return response()->json($message);
 });
