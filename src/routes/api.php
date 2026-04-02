@@ -6,26 +6,34 @@ use App\Models\Message;
 
 // 一覧取得
 Route::get('/messages', function () {
-    return Message::orderBy('id')->get();
+    return Message::with('user')->orderBy('id')->get();
 });
 
 Route::post('/messages', function (Request $request) {
     $request->validate([
         'text' => ['required', 'string'],
-        'is_me' => ['required', 'boolean'],
+        'user_id' => ['required', 'exists:users,id'],
     ]);
-
-    $isMe = filter_var($request->is_me, FILTER_VALIDATE_BOOLEAN);
 
     $message = Message::create([
         'text' => $request->text,
-        'is_me' => $isMe,
+        'user_id' => $request->user_id,
         'is_read' => false,
+        'is_deleted' => false,
     ]);
 
-    Message::where('is_me', !$isMe)
+    Message::where('user_id', '!=', $request->user_id)
         ->where('is_read', false)
         ->update(['is_read' => true]);
+
+    return response()->json($message);
+});
+Route::patch('/messages/{id}', function ($id) {
+    $message = Message::findOrFail($id);
+
+    $message->update([
+        'is_deleted' => true,
+    ]);
 
     return response()->json($message);
 });
